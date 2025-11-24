@@ -32,9 +32,6 @@ async def main() -> None:
         await page.goto("https://www.strava.com/dashboard", wait_until="load")
         await page.accept_cookies()
 
-        logger.info(f"On dashboard: {await page.is_on_dashboard_page()}")
-        logger.info(f"On login page: {await page.is_on_login_page()}")
-
         await page.do_login()
 
         await page.execute_kudos_giving(

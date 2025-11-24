@@ -117,7 +117,7 @@ class CustomPage:
             logger.info("On dashboard page.")
 
     async def execute_kudos_giving(self, number_of_scrolls_to_end: int = 5, interval: int = 60 * 60, athletes_to_skip: List[str] = []) -> None:
-        """Performs kudos giving (give_kudos) and scrolling (scrollings to the end) and page refresh (goto dashboard url).
+        """Performs iterative scrolling, kudos giving and page refresh.
         
         Args:
             number_of_scrolls_to_end: number of scrolls to perform. Single scroll meaning scrolling till the end of a page.
@@ -127,11 +127,11 @@ class CustomPage:
         try:
             while True: 
                 for i in range(number_of_scrolls_to_end):
-                    await self.give_kudos(athletes_to_skip=athletes_to_skip)
-
                     logger.info(f"Scrolling to the end {i + 1}/{number_of_scrolls_to_end} time.")
                     logger.info(10 * "*")
                     await self.scroll_to_bottom_of_page()
+                
+                await self.give_kudos(athletes_to_skip=athletes_to_skip)
 
                 logger.info(f"Sleeping for {interval} seconds.")
                 await asyncio.sleep(interval)
@@ -145,7 +145,10 @@ class CustomPage:
     async def scroll_to_bottom_of_page(self) -> None:
         """Scrolls to the end of page and waits a bit for website to render"""
         await self._page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        await asyncio.sleep(30)
+        await asyncio.sleep(3)
+
+        await self._page.evaluate("window.scrollBy(0, -200)")
+        await asyncio.sleep(12)
         
     async def is_element_in_viewport(self, element: Locator) -> bool:
         """Checks if element is in browsers viewport.
