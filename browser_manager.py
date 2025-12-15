@@ -6,6 +6,8 @@ from playwright.async_api import Page, Locator
 
 from pathlib import Path
 
+from urllib.parse import urlparse
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -116,13 +118,18 @@ class CustomPage:
         else:
             logger.info("On dashboard page.")
 
-    async def execute_kudos_giving(self, number_of_scrolls_to_end: int = 5, interval: int = 60 * 60, athletes_to_skip: List[str] = []) -> None:
+    async def execute_kudos_giving(self, 
+                                   number_of_scrolls_to_end: int = 5, 
+                                   interval: int = 60 * 60, 
+                                   athletes_to_skip: List[str] = [],
+                                   save_map_path: str = None) -> None:
         """Performs iterative scrolling, kudos giving and page refresh.
         
         Args:
             number_of_scrolls_to_end: number of scrolls to perform. Single scroll meaning scrolling till the end of a page.
             interval: interval in seconds between number of scrolls to end
             athletes_to_skip: list of athletes to skip
+            save_map_path: path where to store athelete actiivty map image
         """
         try:
             while True: 
@@ -131,7 +138,7 @@ class CustomPage:
                     logger.info(10 * "*")
                     await self.scroll_to_bottom_of_page()
                 
-                await self.give_kudos(athletes_to_skip=athletes_to_skip)
+                await self.give_kudos(athletes_to_skip=athletes_to_skip, save_map_path=save_map_path)
 
                 logger.info(f"Sleeping for {interval} seconds.")
                 await asyncio.sleep(interval)
@@ -166,13 +173,54 @@ class CustomPage:
         viewport = await self._page.evaluate(
             "() => ({ width: window.innerWidth, height: window.innerHeight })"
         )
-
         top = box["y"]
         bottom = box["y"] + box["height"]
 
         return not (bottom < 0 or top > viewport["height"])
+
+    async def save_activity_map(self, feed_entry: Locator, save_map_path: str = None) -> None:
+        """
+        Save the athlete activity map image from a feed entry into the provided directory.
+
+        Args:
+            feed_entry - entry where to look for map
+            save_map_path - path where to store the map image
+        """
+        
+        if not save_map_path:
+            return
+
+        map_img = feed_entry.locator("//img[@data-testid='map']")
+        if await map_img.count() != 1:
+            return
+
+        src = await map_img.get_attribute("src")
+        if not src:
+            return
+
+        resp = await self._page.request.get(src)
+        if not resp.ok:
+            return
+
+        content_type = resp.headers.get("content-type", "image/png")
+        extension = content_type.split("/")[-1].split(";")[0]
+        
+        url_path = Path(urlparse(src).path)
+        filename = url_path.stem if url_path.stem else "map"
+        
+        data_dir = Path(save_map_path)
+        data_dir.mkdir(parents=True, exist_ok=True)
+        target_path = data_dir / f"{filename}.{extension}"
+
+        if target_path.exists() and target_path.stat().st_size > 0:
+            logger.info(f"Map: already exists {target_path}")
+            return
+
+        target_path.write_bytes(await resp.body())
+
+        logger.info(f"Map: saved {target_path}")
     
-    async def give_kudos(self, athletes_to_skip: List[str] = []) -> None:
+    async def give_kudos(self, athletes_to_skip: List[str] = [], save_map_path: str = None) -> None:
         """
         Click all visible kudos buttons that have not yet been clicked.
         This method: locates all kudos buttons currently in the viewport, filters out those already clicked, 
@@ -192,6 +240,10 @@ class CustomPage:
 
         for i in range(feed_entries_count):
             feed_entry = feed_entries.nth(i)
+
+            if save_map_path:
+                await self.save_activity_map(feed_entry=feed_entry,
+                                             save_map_path=save_map_path)
 
             kudos_buttons = feed_entry.locator("//button[@data-testid='kudos_button']")
             kudos_buttons_count = await kudos_buttons.count()
@@ -226,7 +278,7 @@ class CustomPage:
                 await kudos_button.click()
                 logger.info("-> Clicked.")
             
-            await asyncio.sleep(1)
+            await asyncio.sleep(3)
 
     async def do_scroll(self, num_of_scrolls: int = 1, scroll_px: int = 800) -> None:
         """
