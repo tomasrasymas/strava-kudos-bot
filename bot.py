@@ -16,14 +16,12 @@ logging.basicConfig(
 async def main() -> None:
     # Load configuration from environment variables
     number_of_scrolls = int(os.getenv("NUMBER_OF_SCROLLS_TO_END", "5"))
-    interval_seconds = int(os.getenv("INTERVAL_SECONDS", "3600"))
     athletes_to_skip_str = os.getenv("ATHLETES_TO_SKIP", "")
     athletes_to_skip = [name.strip() for name in athletes_to_skip_str.split(",") if name.strip()]
     save_map_path = os.getenv("SAVE_MAP_PATH", None)
     
     logger.info("Configuration:")
     logger.info(f"  - Number of scrolls: {number_of_scrolls}")
-    logger.info(f"  - Interval: {interval_seconds} seconds")
     logger.info(f"  - Athletes to skip: {athletes_to_skip}")
     logger.info(f"  - Save map path: {save_map_path}")
     
@@ -38,7 +36,6 @@ async def main() -> None:
 
         await page.execute_kudos_giving(
             number_of_scrolls_to_end=number_of_scrolls,
-            interval=interval_seconds,
             athletes_to_skip=athletes_to_skip,
             save_map_path=save_map_path
         )

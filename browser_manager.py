@@ -120,31 +120,22 @@ class CustomPage:
 
     async def execute_kudos_giving(self, 
                                    number_of_scrolls_to_end: int = 5, 
-                                   interval: int = 60 * 60, 
                                    athletes_to_skip: List[str] = [],
                                    save_map_path: str = None) -> None:
         """Performs iterative scrolling, kudos giving and page refresh.
         
         Args:
             number_of_scrolls_to_end: number of scrolls to perform. Single scroll meaning scrolling till the end of a page.
-            interval: interval in seconds between number of scrolls to end
             athletes_to_skip: list of athletes to skip
             save_map_path: path where to store athelete actiivty map image
         """
         try:
-            while True: 
-                for i in range(number_of_scrolls_to_end):
-                    logger.info(f"Scrolling to the end {i + 1}/{number_of_scrolls_to_end} time.")
-                    logger.info(10 * "*")
-                    await self.scroll_to_bottom_of_page()
-                
-                await self.give_kudos(athletes_to_skip=athletes_to_skip, save_map_path=save_map_path)
-
-                logger.info(f"Sleeping for {interval} seconds.")
-                await asyncio.sleep(interval)
-
-                logger.info("Refreshing page.")
-                self.refresh_page()
+            for i in range(number_of_scrolls_to_end):
+                logger.info(f"Scrolling to the end {i + 1}/{number_of_scrolls_to_end} time.")
+                logger.info(10 * "*")
+                await self.scroll_to_bottom_of_page()
+            
+            await self.give_kudos(athletes_to_skip=athletes_to_skip, save_map_path=save_map_path)
         except asyncio.CancelledError:
             logger.info("execute_kudos_giving cancelled, cleaning up…")
             raise
