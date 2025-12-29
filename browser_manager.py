@@ -10,6 +10,8 @@ from urllib.parse import urlparse
 
 import logging
 
+import os
+
 logger = logging.getLogger(__name__)
 
 logging.basicConfig(
@@ -17,7 +19,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
 
-STORAGE_DIR = Path(__file__).parent / 'playwright-state'
+STATE_FILENAME = "state.json"
 
 
 class CustomPage:
@@ -93,6 +95,10 @@ class CustomPage:
         """ Checks if on login page and performs login by clicking loging with Google
         and giving time for human to perform login manually.
         """
+        if await self.is_on_dashboard_page():
+            logger.debug("Already logged in")
+            return
+
         if not await self.is_on_login_page():
             await self._page.goto("https://www.strava.com/login", wait_until="load")
             await asyncio.sleep(1)
@@ -112,6 +118,7 @@ class CustomPage:
         if not await self.is_on_dashboard_page():
             logger.info("Do a manual login.")
             await asyncio.sleep(50)
+            await self._page.context.storage_state(path=STATE_FILENAME)
         else:
             logger.info("On dashboard page.")
 
@@ -311,6 +318,7 @@ class BrowserManager:
         """Initialize the BrowserManager with None values for playwright and context."""
         self.playwright = None
         self.context = None
+        self.browser = None
 
     async def start_browser(self, headless: bool = True) -> None:
         """Start the Playwright browser with a persistent context.
@@ -323,31 +331,36 @@ class BrowserManager:
         """
         if not self.playwright:
             self.playwright = await async_playwright().start()
-        
-        if STORAGE_DIR.exists():
-            logger.info("Found saved authentication state")
-        else:
-            logger.info("No saved authentication state found - will save after first login")
 
-        self.context = await self.playwright.chromium.launch_persistent_context(
-            user_data_dir=str(STORAGE_DIR),
+        self.browser = await self.playwright.chromium.launch(
             headless=headless,
             channel="chrome",
-            viewport={"width": 1440, "height": 900},
-            locale="en-US",
-            timezone_id="Europe/Vilnius",
-            service_workers="allow",
-            permissions=["geolocation"],
-            geolocation={"latitude": 54.6872, "longitude": 25.2797},
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--disable-dev-shm-usage",
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--mute-audio"
-            ],
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            ]
         )
+
+        context_options = {
+            "viewport": {"width": 1440, "height": 900},
+            "locale": "en-US",
+            "timezone_id": "Europe/Vilnius",
+            "service_workers": "allow",
+            "permissions": ["geolocation"],
+            "geolocation": {"latitude": 54.6872, "longitude": 25.2797},
+            "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+
+        if os.path.exists(STATE_FILENAME):
+            logger.info("Found saved authentication state")
+            context_options["storage_state"] = STATE_FILENAME
+        else:
+            logger.info("No saved authentication state found - will save after first login")
+
+        self.context = await self.browser.new_context(**context_options)
     
     async def new_page(self) -> CustomPage:
         """Create a new browser page wrapped in CustomPage.
@@ -368,6 +381,9 @@ class BrowserManager:
         if self.context:
             await self.context.close()
         
+        if self.browser:
+            await self.browser.close()
+
         if self.playwright:
             await self.playwright.stop()
 
