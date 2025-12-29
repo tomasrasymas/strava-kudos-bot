@@ -3,6 +3,7 @@ import os
 from browser_manager import manager
 import logging
 from dotenv import load_dotenv
+import sys
 
 load_dotenv(".env")
 
@@ -10,7 +11,10 @@ logger = logging.getLogger(__name__)
 
 logging.basicConfig(
     level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
 )
 
 async def main() -> None:
