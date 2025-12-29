@@ -55,7 +55,7 @@ class CustomPage:
         Returns:
             True if the current URL contains "dashboard", False otherwise.
         """
-        return "dashboard" in self.playwright_page.url
+        return "dashboard" in self._page.url
     
     async def is_on_login_page(self) -> bool:
         """Check if the current page is the Strava login page.

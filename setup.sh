@@ -18,7 +18,7 @@ echo ""
 
 # Install Playwright browsers
 echo "🌐 Installing Playwright browsers..."
-playwright install chromium
+playwright install chromium chrome
 
 if [ $? -ne 0 ]; then
     echo "❌ Failed to install Playwright browsers"
