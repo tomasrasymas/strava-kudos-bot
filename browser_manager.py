@@ -315,7 +315,7 @@ class BrowserManager:
         self.playwright = None
         self.context = None
 
-    async def start_browser(self) -> None:
+    async def start_browser(self, headless: bool = True) -> None:
         """Start the Playwright browser with a persistent context.
         
         This method initializes Playwright (if not already started) and launches a
@@ -334,7 +334,7 @@ class BrowserManager:
 
         self.context = await self.playwright.chromium.launch_persistent_context(
             user_data_dir=str(STORAGE_DIR),
-            headless=False,
+            headless=headless,
             channel="chrome",
             viewport={"width": 1440, "height": 900},
             locale="en-US",

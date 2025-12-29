@@ -19,13 +19,15 @@ async def main() -> None:
     athletes_to_skip_str = os.getenv("ATHLETES_TO_SKIP", "")
     athletes_to_skip = [name.strip() for name in athletes_to_skip_str.split(",") if name.strip()]
     save_map_path = os.getenv("SAVE_MAP_PATH", None)
+    headless_browser = os.getenv("HEADLESS", "True").lower() == "true"
     
     logger.info("Configuration:")
     logger.info(f"  - Number of scrolls: {number_of_scrolls}")
     logger.info(f"  - Athletes to skip: {athletes_to_skip}")
     logger.info(f"  - Save map path: {save_map_path}")
+    logger.info(f"  - Is headless: {headless_browser}")
     
-    await manager.start_browser()
+    await manager.start_browser(headless=headless_browser)
 
     try:
         page = await manager.new_page()
